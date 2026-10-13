@@ -10,6 +10,10 @@
 
 ## Version History
 
+### v1.1.0
+
+- :arrow_up: Update Core Dependencies
+
 ### v1.0.0
 
 - :tada: Poll the ALERTWest SAPI `GET /api/firecams/v0/cameras` endpoint and submit each located camera under the `camera` Output schema so a CloudTAK Layer Mapping can register it as a Core Device
