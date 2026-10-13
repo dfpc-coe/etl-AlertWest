@@ -1,0 +1,88 @@
+[
+  {
+    "name": "Axis-MtAukum1",
+    "source": "Mt_Aukum_1",
+    "site": {
+      "id": "2148",
+      "description": null,
+      "latitude": "38.573868",
+      "longitude": "-120.726982",
+      "altitude": null,
+      "county": "eldorado",
+      "state": "CA",
+      "time": "2025-12-10T20:35:56Z"
+    },
+    "image": {
+      "time": "2025-12-10T20:35:56Z",
+      "url": "https://img.cdn.prod.alertwest.com/data/img/2148/2025/12/10/Mt_Aukum_1_1765398956_3021.jpg"
+    },
+    "position": {
+      "time": "2025-12-10T20:35:56Z",
+      "pan": "248.00",
+      "tilt": "-1.80",
+      "zoom": "3000"
+    },
+    "parameters": {
+      "time": "2025-12-10T20:35:56Z",
+      "Properties.System.SerialNumber": null,
+      "Brand.Brand": "Axis",
+      "Brand.ProdNbr": "Q6075-E"
+    },
+    "view": {
+      "time": "2025-12-10T20:35:56Z",
+      "line": "38.573868,-120.726982 38.568436,-120.744104"
+    }
+  },
+  {
+    "name": "Ridge Tahoe",
+    "source": "Ridge_Tahoe_NV",
+    "site": {
+      "id": "12224",
+      "description": "Ridge Tahoe Resort",
+      "latitude": "38.9638",
+      "longitude": "-119.9024",
+      "altitude": "2290.5",
+      "county": "douglas",
+      "state": "NV",
+      "time": "2025-04-01T18:06:41Z"
+    },
+    "image": {
+      "time": null,
+      "url": null
+    },
+    "position": {
+      "time": null,
+      "pan": null,
+      "tilt": null,
+      "zoom": null
+    },
+    "parameters": {
+      "time": null,
+      "Properties.System.SerialNumber": "ACCC8E123456",
+      "Brand.Brand": null,
+      "Brand.ProdNbr": null
+    },
+    "view": {
+      "time": null,
+      "line": null
+    }
+  },
+  {
+    "name": "Unlocated",
+    "source": "No_Site",
+    "site": {
+      "id": "1",
+      "description": null,
+      "latitude": null,
+      "longitude": null,
+      "altitude": null,
+      "county": null,
+      "state": null,
+      "time": null
+    },
+    "image": null,
+    "position": null,
+    "parameters": null,
+    "view": null
+  }
+]

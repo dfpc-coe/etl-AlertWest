@@ -1,6 +1,48 @@
-<h1 align='center'>ETL-Template</h1>
+<h1 align='center'>ETL-ALERTWest</h1>
 
-<p align='center'>Template Repository for creating new ETLs</p>
+<p align='center'>Bring <a href='https://alertwest.org'>ALERTWest</a> wildfire camera locations into the TAK System</p>
+
+## Overview
+
+This ETL polls the ALERTWest SAPI [`GET /api/firecams/v0/cameras`](https://docs.alertwest.org/docs/OpenAPI/Reference/get-cameras)
+endpoint and submits every camera that has a site location to CloudTAK under the `camera` Output schema.
+
+Each submitted Feature carries:
+
+- The site location as a Point (with altitude when ALERTWest reports one)
+- The camera name as the callsign and `b-m-p-s-p-loc` (Sensor Point) as the CoT type
+- A `sensor` block with the azimuth & range derived from the ALERTWest view line, so TAK clients can draw the camera bearing
+- The latest image as a CoT link
+- A `metadata` object conforming to the `camera` schema - site, county, state, hardware (manufacturer, model, serial), pan/tilt/zoom, image URL/time, azimuth & range
+
+Cameras without a site latitude/longitude are skipped and logged.
+
+## Configuration
+
+| Variable  | Description |
+| --------- | ----------- |
+| `BaseURL` | Base URL of the ALERTWest SAPI - provided by ALERTWest alongside your API key. The ETL appends `api/firecams/v0/cameras` to it |
+| `APIKey`  | ALERTWest SAPI key - sent as the `x-api-key` header on every request |
+| `DEBUG`   | Print raw API responses in the layer logs |
+
+## Device API
+
+To register each camera as a CloudTAK Core Device rather than (or as well as) a CoT marker, add a Layer Mapping for the
+`camera` schema with the **Core Device** destination. The Features in the `camera` submission expose the following metadata
+fields for the Mapping templates:
+
+| Core Device field | Suggested template |
+| ----------------- | ------------------ |
+| Name              | `{{name}}` |
+| Type              | A MIL-STD-2525E Symbol ID for a ground sensor - ie `10031500001200000000` |
+| Manufacturer      | `{{manufacturer}}` |
+| Model             | `{{model}}` |
+| Serial            | `{{serial}}` |
+| External ID       | system `alertwest`, value `{{source}}` |
+| Remarks           | `{{county}}, {{state}}` |
+
+The Layer token must hold the `device:create` & `device:update` permissions for a Core Device Mapping to be accepted - both are
+requested via `capabilities.json`. Features that match no Core Device Mapping are delivered to the TAK Server as CoT.
 
 ## Development
 
@@ -32,6 +74,14 @@ ts-node task.ts
 npm run build
 cp .env dist/
 node dist/task.js
+```
+
+### Testing
+
+The test suite runs against a mock SAPI and never contacts ALERTWest
+
+```sh
+npm test
 ```
 
 ### Deployment

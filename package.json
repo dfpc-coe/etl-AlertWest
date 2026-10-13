@@ -1,25 +1,29 @@
 {
-    "name": "coe-etl-template",
+    "name": "coe-etl-alertwest",
     "type": "module",
-    "prviate": true,
+    "private": true,
     "version": "1.0.0",
-    "description": "",
+    "description": "Bring ALERTWest wildfire camera locations into the TAK System",
     "main": "task.ts",
     "scripts": {
-        "lint": "eslint *.ts",
+        "lint": "eslint *.ts lib test",
         "build": "tsc --build",
-        "test": "exit 0"
+        "test": "tsx --test test/*.test.ts"
     },
     "author": "Nicholas Ingalls <nicholas.ingalls@state.co.us>",
     "license": "ISC",
+    "engines": {
+        "node": ">= 24"
+    },
     "devDependencies": {
         "@eslint/js": "^10.0.0",
         "eslint": "^10.0.0",
+        "tsx": "^4.23.12",
         "typescript": "^6.0.0",
         "typescript-eslint": "^8.0.0"
     },
     "dependencies": {
         "@sinclair/typebox": "^0.34.0",
-        "@tak-ps/etl": "^10.0.0"
+        "@tak-ps/etl": "^10.22.2"
     }
 }

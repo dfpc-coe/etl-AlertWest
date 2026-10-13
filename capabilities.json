@@ -1,0 +1,32 @@
+{
+    "version": "1.0",
+    "name": "ALERTWest",
+    "description": "Ingests ALERTWest wildfire camera locations, orientation and latest imagery from the ALERTWest SAPI and posts each camera to the map or registers it as a Core Device.",
+    "compute": {
+        "memory": 512,
+        "timeout": 60
+    },
+    "permissions": [
+        {
+            "resource": "feature:*",
+            "required": true,
+            "description": "ALERTWest posts camera locations to the map"
+        },
+        {
+            "resource": "device:*",
+            "required": true,
+            "description": "ALERTWest creates and updates a Core Device for each camera mapped to a Core Device by the Layer's camera Mapping"
+        }
+    ],
+    "invocations": {
+        "incoming": {
+            "schedule": {
+                "description": "Polls the ALERTWest SAPI for the full camera list on a schedule - defaults to every 5 minutes.",
+                "default": {
+                    "enabled": true,
+                    "schedule": "rate(5 minutes)"
+                }
+            }
+        }
+    }
+}

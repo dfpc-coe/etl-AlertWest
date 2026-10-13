@@ -1,43 +1,39 @@
 import type { Static, TSchema } from '@sinclair/typebox';
 import { Type } from '@sinclair/typebox';
-import type { Event } from '@tak-ps/etl';
-import { Feature } from '@tak-ps/node-cot'
+import type { Event, NamedSchema, SubmitFeatureCollection, SubmitFeature } from '@tak-ps/etl';
 import ETL, { SchemaType, handler as internal, local, DataFlowType, InvocationType } from '@tak-ps/etl';
+import AlertWest from './lib/alertwest.js';
+import { CameraSchema, SCHEMA_CAMERA, cameraFeature } from './lib/features.js';
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars --  Fetch with an additional Response.typed(TypeBox Object) definition
-import { fetch } from '@tak-ps/etl';
-
-/**
- * The Input Schema contains the environment object that will be requested via the CloudTAK UI
- * It should be a valid TypeBox object - https://github.com/sinclairzx81/typebox
- */
 const InputSchema = Type.Object({
-    'DEBUG': Type.Boolean({
+    BaseURL: Type.String({
+        description: 'Base URL of the ALERTWest SAPI as provided by ALERTWest alongside your API Key'
+    }),
+    APIKey: Type.String({
+        description: 'ALERTWest SAPI Key - sent as the x-api-key header'
+    }),
+    DEBUG: Type.Boolean({
         default: false,
-        description: 'Print results in logs'
+        description: 'Print raw API responses in the layer logs'
     })
 });
 
-/**
- * The Output Schema contains the known properties that will be returned on the
- * GeoJSON Feature in the .properties.metdata object
- */
-const OutputSchema = Type.Object({})
-
 export default class Task extends ETL {
-    static name = 'default'
+    static name = 'etl-alertwest'
     static flow = [ DataFlowType.Incoming ];
     static invocation = [ InvocationType.Schedule ];
 
     async schema(
         type: SchemaType = SchemaType.Input,
         flow: DataFlowType = DataFlowType.Incoming
-    ): Promise<TSchema> {
+    ): Promise<TSchema | Array<NamedSchema>> {
         if (flow === DataFlowType.Incoming) {
             if (type === SchemaType.Input) {
                 return InputSchema;
             } else {
-                return OutputSchema;
+                return [
+                    { id: SCHEMA_CAMERA, schema: CameraSchema }
+                ];
             }
         } else {
             return Type.Object({});
@@ -45,19 +41,30 @@ export default class Task extends ETL {
     }
 
     async control(): Promise<void> {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars -- Get the Environment from the Server and ensure it conforms to the schema
         const env = await this.env(InputSchema);
 
-        const features: Static<typeof Feature.InputFeature>[] = [];
+        const api = new AlertWest({
+            url: env.BaseURL,
+            key: env.APIKey,
+            debug: env.DEBUG
+        });
 
-        // Get things here and convert them to GeoJSON Feature Collections
-        // That conform to the node-cot Feature properties spec
-        // https://github.com/dfpc-coe/node-CoT/
+        const cameras = await api.cameras();
 
-        const fc: Static<typeof Feature.InputFeatureCollection> = {
-            type: 'FeatureCollection',
-            features: features
+        const features = new Map<string, Static<typeof SubmitFeature>>();
+
+        for (const camera of cameras) {
+            const feat = cameraFeature(camera);
+            if (feat && feat.id && !features.has(feat.id)) features.set(feat.id, feat);
         }
+
+        console.log(`ok - obtained ${features.size} located cameras from ${cameras.length} cameras`);
+
+        const fc: Static<typeof SubmitFeatureCollection> = {
+            type: 'FeatureCollection',
+            schema: SCHEMA_CAMERA,
+            features: Array.from(features.values())
+        };
 
         await this.submit(fc);
     }
@@ -65,6 +72,5 @@ export default class Task extends ETL {
 
 await local(await Task.init(import.meta.url), import.meta.url);
 export async function handler(event: Event = {}) {
-    return await internal(new Task(import.meta.url), event);
+    return await internal(await Task.init(import.meta.url), event);
 }
-

@@ -10,13 +10,8 @@
 
 ## Version History
 
-### Pending Release
-
-- :rocket: Build & push via `cloudtak-etl` so `capabilities.json` is annotated onto the OCI manifest
-- :tada: Add starter `capabilities.json`
-- :arrow_up: Update Github Actions to current versions & run build/test in CI
-
 ### v1.0.0
 
-- :rocket: Initial Approach
-
+- :tada: Poll the ALERTWest SAPI `GET /api/firecams/v0/cameras` endpoint and submit each located camera under the `camera` Output schema so a CloudTAK Layer Mapping can register it as a Core Device
+- :tada: Derive camera azimuth & range from the ALERTWest view line and attach the latest image as a CoT link
+- :white_check_mark: Unit tests for parsing, feature mapping & the control loop against a mock SAPI
