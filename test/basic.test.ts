@@ -21,11 +21,14 @@ test('Incoming Input schema', async () => {
 
     assert.equal(schema.type, 'object');
 
-    for (const key of ['BaseURL', 'APIKey', 'DEBUG']) {
+    for (const key of ['BaseURL', 'States', 'Providers', 'IncludeOffline', 'DEBUG']) {
         assert.ok(schema.properties[key], `Env schema missing property: ${key}`);
+        assert.notEqual(schema.properties[key].default, undefined, `Env property ${key} must have a default`);
     }
 
-    assert.deepEqual(schema.required, ['BaseURL', 'APIKey', 'DEBUG']);
+    assert.ok(!schema.properties.APIKey);
+    assert.equal(schema.properties.BaseURL.default, 'https://api.cdn.prod.alertwest.com');
+    assert.equal(schema.properties.IncludeOffline.default, false);
     assert.equal(schema.properties.DEBUG.default, false);
 });
 
@@ -39,7 +42,7 @@ test('Incoming Output schema', async () => {
     const schema = schemas[0].schema;
 
     assert.equal(schema.type, 'object');
-    for (const key of ['name', 'source', 'site_id', 'county', 'state', 'image_url', 'image_time', 'manufacturer', 'model', 'serial', 'azimuth', 'range']) {
+    for (const key of ['id', 'name', 'hostname', 'location_id', 'county', 'state', 'provider', 'provider_link', 'ptz', 'offline', 'azimuth', 'fov', 'image_url', 'image_time']) {
         assert.ok(schema.properties[key], `Output schema missing property: ${key}`);
     }
     assert.ok(!schema.properties.latitude);

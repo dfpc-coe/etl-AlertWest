@@ -10,6 +10,13 @@
 
 ## Version History
 
+### v1.2.0
+
+- :tada: Poll the public ALERTWest camera API (`GET /api/getCameraDataByLoc`) - no API key is required and `BaseURL` defaults to `https://api.cdn.prod.alertwest.com`
+- :tada: `States`, `Providers` & `IncludeOffline` inputs filter the ~13k camera feed - private cameras & locations are always excluded
+- :tada: Latest image URL built from the camera screenshot filename on the ALERTWest image CDN and linked (`r-u`) alongside the provider website; screenshots older than a day are not linked
+- :rocket: `camera` schema reworked around the public feed (id, location_id, provider, sponsor, camera class/type, ptz, offline, azimuth, elevation, fov...) - `APIKey`, `source`, `site_*`, `view_line`, `range`, manufacturer/model/serial are removed
+
 ### v1.1.1
 
 - :arrow_up: Update Core Dependencies

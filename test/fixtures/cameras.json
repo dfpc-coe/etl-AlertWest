@@ -1,88 +1,247 @@
-[
-  {
-    "name": "Axis-MtAukum1",
-    "source": "Mt_Aukum_1",
-    "site": {
-      "id": "2148",
-      "description": null,
-      "latitude": "38.573868",
-      "longitude": "-120.726982",
-      "altitude": null,
-      "county": "eldorado",
-      "state": "CA",
-      "time": "2025-12-10T20:35:56Z"
+{
+  "code": 1,
+  "str": "",
+  "data": {
+    "locs": {
+      "data": [
+        {
+          "id": 205,
+          "lat": "38.035301",
+          "lon": "-120.161903",
+          "st": "CA",
+          "lp": 0
+        },
+        {
+          "id": 5915,
+          "lat": "47.518595",
+          "lon": "-122.198357",
+          "st": "WA",
+          "lp": 0
+        },
+        {
+          "id": 7872,
+          "lat": "33.687900",
+          "lon": "-117.899020",
+          "st": "CA",
+          "lp": 0
+        },
+        {
+          "id": 23494,
+          "lat": "40.594900",
+          "lon": "-111.852930",
+          "st": "UT",
+          "lp": 0
+        },
+        {
+          "id": 999999,
+          "lat": "47.518595",
+          "lon": "-122.198357",
+          "st": "WA",
+          "lp": 1
+        }
+      ],
+      "key": {
+        "id": "locId",
+        "lat": "locLat",
+        "lon": "locLon",
+        "st": "locState",
+        "lp": "locPrivate"
+      }
     },
-    "image": {
-      "time": "2025-12-10T20:35:56Z",
-      "url": "https://img.cdn.prod.alertwest.com/data/img/2148/2025/12/10/Mt_Aukum_1_1765398956_3021.jpg"
-    },
-    "position": {
-      "time": "2025-12-10T20:35:56Z",
-      "pan": "248.00",
-      "tilt": "-1.80",
-      "zoom": "3000"
-    },
-    "parameters": {
-      "time": "2025-12-10T20:35:56Z",
-      "Properties.System.SerialNumber": null,
-      "Brand.Brand": "Axis",
-      "Brand.ProdNbr": "Q6075-E"
-    },
-    "view": {
-      "time": "2025-12-10T20:35:56Z",
-      "line": "38.573868,-120.726982 38.568436,-120.744104"
+    "cams": {
+      "data": [
+        {
+          "ato": 1,
+          "p": "37.13",
+          "t": "-5.98",
+          "z": "1",
+          "af": 1,
+          "foc": "2250",
+          "br": "5000",
+          "ptz": 1,
+          "id": "2178",
+          "pv": 0,
+          "lmt": "1792465512",
+          "lid": 205,
+          "cn": "Mt_Lewis_Tuolumne_1",
+          "hn": "Axis-MtLewisTuolumne",
+          "img": "Mt_Lewis_Tuolumne_1_1792466294_6462.jpg",
+          "off": 0,
+          "cl": 427,
+          "isp": "Conifer",
+          "typ": "5",
+          "cc": "axis",
+          "fov": "62.80",
+          "sp": "PG&E",
+          "co": "Tuolumne",
+          "st": "CA",
+          "pr": "UCSD",
+          "pl": "https://alertcalifornia.org/",
+          "pi": "/img/alertcalifornia-ucsd-logo.png",
+          "ps": "/img/alertcalifornia-ucsd-logo-actually-square.png",
+          "tb": 1,
+          "trg": 0
+        },
+        {
+          "ato": 0,
+          "p": 0,
+          "t": "0.00",
+          "z": "1",
+          "af": 1,
+          "foc": "5000",
+          "br": "5000",
+          "ptz": 0,
+          "id": "9659",
+          "pv": 0,
+          "lmt": 0,
+          "lid": 5915,
+          "cn": "I-405_at_MP_65_NE_30th_St",
+          "hn": "wsdot1065",
+          "img": "I-405_at_MP_65_NE_30th_St_1792465967_4359_s.jpg",
+          "off": 0,
+          "cl": 0,
+          "typ": "15",
+          "cc": "cctv",
+          "fov": "45.00",
+          "sp": "",
+          "co": "",
+          "st": "WA",
+          "pr": "WSDOT",
+          "pl": "https://wsdot.com/Travel/Real-time/Map/layer/camera",
+          "pi": "/img/wsdot-logo-white.svg",
+          "ps": "/img/wsdot-logo-white.svg",
+          "tb": 1,
+          "trg": 0
+        },
+        {
+          "ato": 0,
+          "p": 0,
+          "t": "0.00",
+          "z": "1",
+          "af": 1,
+          "foc": "5000",
+          "br": "5000",
+          "ptz": 0,
+          "id": "11852",
+          "pv": 0,
+          "lmt": 0,
+          "lid": 7872,
+          "cn": "I-405_SR-73",
+          "hn": "i405sr73",
+          "img": "I-405_SR-73_1747256005_6235_s.jpg",
+          "off": 1,
+          "cl": 0,
+          "typ": "12",
+          "cc": "cctv",
+          "fov": "45.00",
+          "sp": "",
+          "co": "",
+          "st": "CA",
+          "pr": "CALTRANS",
+          "pl": "https://dot.ca.gov/",
+          "pi": "/img/caltranslogo.png",
+          "ps": "/img/caltranslogo.png",
+          "tb": 1,
+          "trg": 1
+        },
+        {
+          "ato": 0,
+          "p": 0,
+          "t": 0,
+          "z": 1,
+          "af": 1,
+          "foc": 1,
+          "br": 1,
+          "ptz": 0,
+          "id": "21017",
+          "pv": 0,
+          "lmt": 0,
+          "lid": 23494,
+          "cn": "1300_E_8600_S_SND",
+          "hn": "UDOT Camera 100868",
+          "img": "",
+          "off": 1,
+          "cl": 0,
+          "typ": "24",
+          "cc": "cctv",
+          "fov": 0,
+          "sp": "",
+          "co": "",
+          "st": "UT",
+          "pr": "UDOT",
+          "pl": "https://udottraffic.utah.gov/",
+          "pi": "/img/udot_logo.png",
+          "ps": "/img/udot_logo.png",
+          "tb": 1,
+          "trg": 1
+        },
+        {
+          "ato": 0,
+          "p": 0,
+          "t": "0.00",
+          "z": "1",
+          "af": 1,
+          "foc": "5000",
+          "br": "5000",
+          "ptz": 0,
+          "id": "999999",
+          "pv": 0,
+          "lmt": 0,
+          "lid": 999999,
+          "cn": "Private_Cam",
+          "hn": "wsdot1065",
+          "img": "I-405_at_MP_65_NE_30th_St_1792465967_4359_s.jpg",
+          "off": 0,
+          "cl": 0,
+          "typ": "15",
+          "cc": "cctv",
+          "fov": "45.00",
+          "sp": "",
+          "co": "",
+          "st": "WA",
+          "pr": "WSDOT",
+          "pl": "https://wsdot.com/Travel/Real-time/Map/layer/camera",
+          "pi": "/img/wsdot-logo-white.svg",
+          "ps": "/img/wsdot-logo-white.svg",
+          "tb": 1,
+          "trg": 0
+        }
+      ],
+      "key": {
+        "ato": "camAutoTargetOverride",
+        "p": "camAzimuth",
+        "t": "camElevation",
+        "z": "camZoom",
+        "af": "camAutoFocus",
+        "foc": "camFocus",
+        "br": "camBrightness",
+        "ptz": "camHasPTZ",
+        "id": "camId",
+        "pv": "camPrivate",
+        "lmt": "camLastMoved",
+        "lid": "camLocation",
+        "cn": "camName",
+        "hn": "camHostname",
+        "img": "camScreenshot",
+        "off": "camOffline",
+        "cl": "camLatency",
+        "isp": "camIsp",
+        "typ": "camType",
+        "cc": "camClass",
+        "fov": "camViewWidth",
+        "sp": "camSponsor",
+        "co": "camCounty",
+        "st": "camState",
+        "pr": "camProviderName",
+        "pl": "camProviderLink",
+        "pi": "camProviderLogo",
+        "ps": "camProviderLogoSquare",
+        "tb": "camTourable",
+        "trg": "camTouring",
+        "tr": "camTour"
+      }
     }
   },
-  {
-    "name": "Ridge Tahoe",
-    "source": "Ridge_Tahoe_NV",
-    "site": {
-      "id": "12224",
-      "description": "Ridge Tahoe Resort",
-      "latitude": "38.9638",
-      "longitude": "-119.9024",
-      "altitude": "2290.5",
-      "county": "douglas",
-      "state": "NV",
-      "time": "2025-04-01T18:06:41Z"
-    },
-    "image": {
-      "time": null,
-      "url": null
-    },
-    "position": {
-      "time": null,
-      "pan": null,
-      "tilt": null,
-      "zoom": null
-    },
-    "parameters": {
-      "time": null,
-      "Properties.System.SerialNumber": "ACCC8E123456",
-      "Brand.Brand": null,
-      "Brand.ProdNbr": null
-    },
-    "view": {
-      "time": null,
-      "line": null
-    }
-  },
-  {
-    "name": "Unlocated",
-    "source": "No_Site",
-    "site": {
-      "id": "1",
-      "description": null,
-      "latitude": null,
-      "longitude": null,
-      "altitude": null,
-      "county": null,
-      "state": null,
-      "time": null
-    },
-    "image": null,
-    "position": null,
-    "parameters": null,
-    "view": null
-  }
-]
+  "err": "",
+  "rendered": ""
+}

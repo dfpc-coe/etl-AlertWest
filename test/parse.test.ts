@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert';
-import { text, number, coordinates, timestamp, bearing, distance, viewLine } from '../lib/parse.js';
+import { text, number, flag, coordinates, epoch, imageTime, imageUrl } from '../lib/parse.js';
 
 test('text', () => {
     assert.equal(text(' a '), 'a');
@@ -16,33 +16,46 @@ test('number', () => {
     assert.equal(number('abc'), null);
 });
 
+test('flag', () => {
+    assert.equal(flag(1), true);
+    assert.equal(flag('1'), true);
+    assert.equal(flag(true), true);
+    assert.equal(flag(0), false);
+    assert.equal(flag(null), false);
+    assert.equal(flag(undefined), false);
+});
+
 test('coordinates', () => {
-    assert.deepEqual(coordinates({ latitude: '38.573868', longitude: '-120.726982' }), [-120.726982, 38.573868]);
-    assert.equal(coordinates({ latitude: '0', longitude: '0' }), null);
-    assert.equal(coordinates({ latitude: '91', longitude: '0' }), null);
-    assert.equal(coordinates({ latitude: null, longitude: '1' }), null);
+    assert.deepEqual(coordinates({ lat: '38.573868', lon: '-120.726982' }), [-120.726982, 38.573868]);
+    assert.equal(coordinates({ lat: '0', lon: '0' }), null);
+    assert.equal(coordinates({ lat: '91', lon: '0' }), null);
+    assert.equal(coordinates({ lat: null, lon: '1' }), null);
 });
 
-test('timestamp', () => {
-    assert.equal(timestamp('2025-12-10T20:35:56Z'), '2025-12-10T20:35:56.000Z');
-    assert.equal(timestamp('nope'), null);
-    assert.equal(timestamp(null), null);
+test('epoch', () => {
+    assert.equal(epoch(1792465512), '2026-10-20T03:05:12.000Z');
+    assert.equal(epoch('1792465512'), '2026-10-20T03:05:12.000Z');
+    assert.equal(epoch(0), null);
+    assert.equal(epoch(null), null);
 });
 
-test('bearing & distance', () => {
-    assert.equal(Math.round(bearing([0, 0], [0, 1])), 0);
-    assert.equal(Math.round(bearing([0, 0], [1, 0])), 90);
-    assert.equal(Math.round(bearing([0, 0], [0, -1])), 180);
-    assert.equal(Math.round(bearing([0, 0], [-1, 0])), 270);
-
-    assert.equal(Math.round(distance([0, 0], [0, 1]) / 1000), 111);
+test('imageTime', () => {
+    assert.equal(imageTime('Mt_Lewis_Tuolumne_1_1792466294_6462.jpg')?.toISOString(), '2026-10-20T03:18:14.000Z');
+    assert.equal(imageTime('I-405_SR-73_1747256005_6235_s.jpg')?.toISOString(), '2025-05-14T20:53:25.000Z');
+    assert.equal(imageTime(''), null);
+    assert.equal(imageTime('nope.jpg'), null);
 });
 
-test('viewLine', () => {
-    assert.deepEqual(viewLine('38.573868,-120.726982 38.568436,-120.744104'), [
-        [-120.726982, 38.573868],
-        [-120.744104, 38.568436]
-    ]);
-    assert.deepEqual(viewLine(null), []);
-    assert.deepEqual(viewLine('garbage'), []);
+test('imageUrl', () => {
+    assert.equal(
+        imageUrl('2178', 'Mt_Lewis_Tuolumne_1_1792466294_6462.jpg'),
+        'https://img.cdn.prod.alertwest.com/data/img/2178/2026/10/20/Mt_Lewis_Tuolumne_1_1792466294_6462.jpg'
+    );
+    // Date folders follow the UTC capture date
+    assert.equal(
+        imageUrl(1, 'Late_1736294001_8143_s.jpg'),
+        'https://img.cdn.prod.alertwest.com/data/img/1/2025/01/07/Late_1736294001_8143_s.jpg'
+    );
+    assert.equal(imageUrl('1', ''), null);
+    assert.equal(imageUrl('', 'Late_1736294001_8143_s.jpg'), null);
 });

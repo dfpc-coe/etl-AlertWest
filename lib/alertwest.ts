@@ -3,72 +3,100 @@ import { Type } from '@sinclair/typebox';
 import { Value } from '@sinclair/typebox/value';
 import { fetch } from '@tak-ps/etl';
 
-const CAMERAS_PATH = 'api/firecams/v0/cameras';
+export const DEFAULT_URL = 'https://api.cdn.prod.alertwest.com';
+export const IMAGE_URL = 'https://img.cdn.prod.alertwest.com';
+
+const CAMERAS_PATH = 'api/getCameraDataByLoc';
 
 const Nullable = <T extends TSchema>(type: T) => Type.Union([Type.Null(), type]);
-const Text = Nullable(Type.String());
+const Text = Type.Optional(Nullable(Type.String()));
+const Numeric = Type.Optional(Nullable(Type.Union([Type.String(), Type.Number()])));
+const Flag = Type.Optional(Nullable(Type.Union([Type.Boolean(), Type.Integer(), Type.String()])));
 
-/** Camera record as returned by GET /api/firecams/v0/cameras */
+/**
+ * Camera location as returned by GET /api/getCameraDataByLoc - the `key`
+ * object in the response maps each short key to its name (locId, locLat...)
+ */
+export const Location = Type.Object({
+    id: Type.Union([Type.String(), Type.Integer()]),
+    lat: Numeric,
+    lon: Numeric,
+    st: Text,
+    lp: Flag
+});
+
+/**
+ * Camera as returned by GET /api/getCameraDataByLoc - short keys are
+ * expanded by the `key` object in the response (camId, camName, camAzimuth...)
+ */
 export const Camera = Type.Object({
-    name: Type.String(),
-    source: Type.String(),
-    site: Type.Optional(Nullable(Type.Object({
-        id: Type.Optional(Nullable(Type.Union([Type.String(), Type.Integer()]))),
-        description: Type.Optional(Text),
-        latitude: Type.Optional(Nullable(Type.Union([Type.String(), Type.Number()]))),
-        longitude: Type.Optional(Nullable(Type.Union([Type.String(), Type.Number()]))),
-        altitude: Type.Optional(Nullable(Type.Union([Type.String(), Type.Number()]))),
-        county: Type.Optional(Text),
-        state: Type.Optional(Text),
-        time: Type.Optional(Text)
+    id: Type.Union([Type.String(), Type.Integer()]),
+    lid: Type.Union([Type.String(), Type.Integer()]),
+    cn: Text,
+    hn: Text,
+    img: Text,
+    p: Numeric,
+    t: Numeric,
+    z: Numeric,
+    fov: Numeric,
+    lmt: Numeric,
+    cl: Numeric,
+    off: Flag,
+    pv: Flag,
+    ptz: Flag,
+    cc: Text,
+    typ: Text,
+    co: Text,
+    st: Text,
+    pr: Text,
+    pl: Text,
+    sp: Text,
+    isp: Text
+});
+
+const Response = Type.Object({
+    code: Type.Optional(Type.Union([Type.Integer(), Type.String()])),
+    err: Type.Optional(Nullable(Type.String())),
+    // An array on error responses, an object on success
+    data: Type.Optional(Type.Unknown())
+});
+
+const Data = Type.Object({
+    locs: Type.Optional(Nullable(Type.Object({
+        data: Type.Optional(Nullable(Type.Array(Type.Unknown())))
     }))),
-    image: Type.Optional(Nullable(Type.Object({
-        time: Type.Optional(Text),
-        url: Type.Optional(Text)
-    }))),
-    position: Type.Optional(Nullable(Type.Object({
-        time: Type.Optional(Text),
-        pan: Type.Optional(Nullable(Type.Union([Type.String(), Type.Number()]))),
-        tilt: Type.Optional(Nullable(Type.Union([Type.String(), Type.Number()]))),
-        zoom: Type.Optional(Nullable(Type.Union([Type.String(), Type.Number()])))
-    }))),
-    parameters: Type.Optional(Nullable(Type.Object({
-        time: Type.Optional(Text),
-        'Properties.System.SerialNumber': Type.Optional(Text),
-        'Brand.Brand': Type.Optional(Text),
-        'Brand.ProdNbr': Type.Optional(Text)
-    }))),
-    view: Type.Optional(Nullable(Type.Object({
-        time: Type.Optional(Text),
-        line: Type.Optional(Text)
+    cams: Type.Optional(Nullable(Type.Object({
+        data: Type.Optional(Nullable(Type.Array(Type.Unknown())))
     })))
 });
 
+export type CameraData = {
+    cameras: Array<Static<typeof Camera>>;
+    locations: Map<string, Static<typeof Location>>;
+};
+
 export type AlertWestOptions = {
-    url: string;
-    key: string;
+    url?: string;
     debug?: boolean;
 };
 
 export default class AlertWest {
     base: URL;
-    key: string;
     debug: boolean;
 
-    constructor(opts: AlertWestOptions) {
-        this.base = new URL(opts.url.endsWith('/') ? opts.url : `${opts.url}/`);
-        this.key = opts.key;
+    constructor(opts: AlertWestOptions = {}) {
+        const url = opts.url || DEFAULT_URL;
+        this.base = new URL(url.endsWith('/') ? url : `${url}/`);
         this.debug = opts.debug ?? false;
     }
 
-    async cameras(): Promise<Array<Static<typeof Camera>>> {
+    async cameras(): Promise<CameraData> {
         const url = new URL(CAMERAS_PATH, this.base);
 
         const res = await fetch(url, {
             method: 'GET',
             headers: {
-                Accept: 'application/json',
-                'x-api-key': this.key
+                Accept: 'application/json'
             },
             safeUrlAllow: [this.base.origin]
         });
@@ -77,18 +105,23 @@ export default class AlertWest {
             throw new Error(`ALERTWest ${CAMERAS_PATH} Failed: ${res.status} ${await res.text()}`);
         }
 
-        const body = await res.json();
+        const body = Value.Parse(Response, await res.json());
         if (this.debug) console.log(`ok - ALERTWest ${CAMERAS_PATH}:`, JSON.stringify(body));
 
-        if (!Array.isArray(body)) {
-            throw new Error(`ALERTWest ${CAMERAS_PATH} returned an unexpected response shape`);
+        if (Number(body.code) !== 1 || !Value.Check(Data, body.data)) {
+            throw new Error(`ALERTWest ${CAMERAS_PATH} Failed: ${body.err || 'unexpected response'}`);
         }
 
-        return body.map((camera) => this.camera(camera));
-    }
+        const data = body.data;
 
-    private camera(body: unknown): Static<typeof Camera> {
-        return Value.Parse(Camera, body);
+        const locations = new Map<string, Static<typeof Location>>();
+        for (const loc of data.locs?.data ?? []) {
+            const location = Value.Parse(Location, loc);
+            locations.set(String(location.id), location);
+        }
+
+        const cameras = (data.cams?.data ?? []).map((cam) => Value.Parse(Camera, cam));
+
+        return { cameras, locations };
     }
 }
-

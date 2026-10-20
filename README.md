@@ -4,26 +4,34 @@
 
 ## Overview
 
-This ETL polls the ALERTWest SAPI [`GET /api/firecams/v0/cameras`](https://docs.alertwest.org/docs/OpenAPI/Reference/get-cameras)
-endpoint and submits every camera that has a site location to CloudTAK under the `camera` Output schema.
+This ETL polls the public ALERTWest camera API (`GET /api/getCameraDataByLoc`) and submits every public, located camera to
+CloudTAK under the `camera` Output schema. No API key is required.
 
 Each submitted Feature carries:
 
-- The site location as a Point (with altitude when ALERTWest reports one)
+- The camera location as a Point
 - The camera name as the callsign and `b-m-p-s-p-loc` (Sensor Point) as the CoT type
-- A `sensor` block with the azimuth & range derived from the ALERTWest view line, so TAK clients can draw the camera bearing
-- The latest image as a CoT link
-- A `metadata` object conforming to the `camera` schema - site, county, state, hardware (manufacturer, model, serial), pan/tilt/zoom, image URL/time, azimuth & range
+- A `sensor` block with the azimuth & field of view of PTZ cameras, so TAK clients can show the camera bearing
+- The latest image (`r-u` link, shown as a thumbnail in CloudTAK and a tappable link in ATAK) and the provider website
+- A `metadata` object conforming to the `camera` schema - provider, sponsor, county, state, camera class/type, PTZ &
+  offline flags, azimuth/elevation/zoom/fov, last moved time, image URL/time
 
-Cameras without a site latitude/longitude are skipped and logged.
+Latest images live on the ALERTWest image CDN under the camera id and the UTC capture date encoded in the screenshot
+filename. The CDN stops serving old screenshots, so images older than a day are reported in `metadata.image_time` but not
+linked. Private cameras & locations are never submitted, and unlocated cameras are skipped and logged.
 
 ## Configuration
 
-| Variable  | Description |
-| --------- | ----------- |
-| `BaseURL` | Base URL of the ALERTWest SAPI - provided by ALERTWest alongside your API key. The ETL appends `api/firecams/v0/cameras` to it |
-| `APIKey`  | ALERTWest SAPI key - sent as the `x-api-key` header on every request |
-| `DEBUG`   | Print raw API responses in the layer logs |
+| Variable         | Description |
+| ---------------- | ----------- |
+| `BaseURL`        | Base URL of the public ALERTWest camera API - defaults to `https://api.cdn.prod.alertwest.com` |
+| `States`         | Two letter state or province codes to include (ie `CA`, `CO`) - empty includes every camera |
+| `Providers`      | Camera providers to include (ie `UCSD`, `ALERTWest`, `CALTRANS`, `FAA`, `UDOT`) - empty includes every provider |
+| `IncludeOffline` | Include cameras ALERTWest reports as offline - off by default |
+| `DEBUG`          | Print raw API responses in the layer logs |
+
+The full feed is around 13,000 cameras across 40 states & provinces, most of them DOT traffic cameras - use the `States`
+and/or `Providers` filters to keep the Layer to the cameras you need.
 
 ## Device API
 
@@ -35,11 +43,11 @@ fields for the Mapping templates:
 | ----------------- | ------------------ |
 | Name              | `{{name}}` |
 | Type              | A MIL-STD-2525E Symbol ID for a ground sensor - ie `10031500001200000000` |
-| Manufacturer      | `{{manufacturer}}` |
-| Model             | `{{model}}` |
-| Serial            | `{{serial}}` |
-| External ID       | system `alertwest`, value `{{source}}` |
-| Remarks           | `{{county}}, {{state}}` |
+| Manufacturer      | `{{camera_class}}` |
+| Model             | `{{camera_type}}` |
+| Serial            | `{{hostname}}` |
+| External ID       | system `alertwest`, value `{{id}}` |
+| Remarks           | `{{provider}} - {{county}}, {{state}}` |
 
 The Layer token must hold the `device:create` & `device:update` permissions for a Core Device Mapping to be accepted - both are
 requested via `capabilities.json`. Features that match no Core Device Mapping are delivered to the TAK Server as CoT.
@@ -78,7 +86,7 @@ node dist/task.js
 
 ### Testing
 
-The test suite runs against a mock SAPI and never contacts ALERTWest
+The test suite runs against a mock of the ALERTWest API and never contacts ALERTWest
 
 ```sh
 npm test
