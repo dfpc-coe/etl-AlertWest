@@ -37,13 +37,16 @@ test('Incoming Output schema', async () => {
     const schemas = await task.schema(SchemaType.Output, DataFlowType.Incoming);
 
     assert.ok(Array.isArray(schemas));
-    assert.deepEqual(schemas.map((named) => named.id), ['camera']);
+    assert.deepEqual(schemas.map((named) => named.id), ['site']);
 
     const schema = schemas[0].schema;
 
     assert.equal(schema.type, 'object');
-    for (const key of ['id', 'name', 'hostname', 'location_id', 'county', 'state', 'provider', 'provider_link', 'ptz', 'offline', 'azimuth', 'fov', 'image_url', 'image_time']) {
+    for (const key of ['id', 'name', 'county', 'state', 'provider', 'sponsor', 'offline', 'camera_count', 'image_url', 'image_time', 'cameras']) {
         assert.ok(schema.properties[key], `Output schema missing property: ${key}`);
+    }
+    for (const key of ['id', 'name', 'hostname', 'provider', 'provider_link', 'ptz', 'offline', 'azimuth', 'fov', 'image_url', 'image_time']) {
+        assert.ok(schema.properties.cameras.items.properties[key], `Camera schema missing property: ${key}`);
     }
     assert.ok(!schema.properties.latitude);
     assert.ok(!schema.properties.longitude);

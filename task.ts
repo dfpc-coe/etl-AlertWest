@@ -3,7 +3,8 @@ import { Type } from '@sinclair/typebox';
 import type { Event, NamedSchema, SubmitFeatureCollection, SubmitFeature } from '@tak-ps/etl';
 import ETL, { SchemaType, handler as internal, local, DataFlowType, InvocationType } from '@tak-ps/etl';
 import AlertWest, { DEFAULT_URL } from './lib/alertwest.js';
-import { CameraSchema, SCHEMA_CAMERA, cameraFeature } from './lib/features.js';
+import type { Camera, Location } from './lib/alertwest.js';
+import { SiteSchema, SCHEMA_SITE, siteFeature } from './lib/features.js';
 import { text, flag } from './lib/parse.js';
 
 const InputSchema = Type.Object({
@@ -43,7 +44,7 @@ export default class Task extends ETL {
                 return InputSchema;
             } else {
                 return [
-                    { id: SCHEMA_CAMERA, schema: CameraSchema }
+                    { id: SCHEMA_SITE, schema: SiteSchema }
                 ];
             }
         } else {
@@ -64,7 +65,7 @@ export default class Task extends ETL {
         const states = new Set(env.States.map((state) => state.trim().toUpperCase()).filter((state) => state));
         const providers = new Set(env.Providers.map((provider) => provider.trim().toUpperCase()).filter((provider) => provider));
 
-        const features = new Map<string, Static<typeof SubmitFeature>>();
+        const sites = new Map<string, { location: Static<typeof Location> | undefined, cameras: Array<Static<typeof Camera>> }>();
         let skipped = 0;
 
         for (const camera of cameras) {
@@ -92,16 +93,24 @@ export default class Task extends ETL {
                 continue;
             }
 
-            const feat = cameraFeature(camera, location);
-            if (feat && feat.id && !features.has(feat.id)) features.set(feat.id, feat);
+            const key = String(camera.lid);
+            const site = sites.get(key) ?? { location, cameras: [] };
+            site.cameras.push(camera);
+            sites.set(key, site);
         }
 
-        console.log(`ok - obtained ${features.size} cameras from ${cameras.length} (${skipped} filtered)`);
+        const features: Array<Static<typeof SubmitFeature>> = [];
+        for (const site of sites.values()) {
+            const feat = siteFeature(site.cameras, site.location);
+            if (feat) features.push(feat);
+        }
+
+        console.log(`ok - obtained ${features.length} sites from ${cameras.length} cameras (${skipped} filtered)`);
 
         const fc: Static<typeof SubmitFeatureCollection> = {
             type: 'FeatureCollection',
-            schema: SCHEMA_CAMERA,
-            features: Array.from(features.values())
+            schema: SCHEMA_SITE,
+            features
         };
 
         await this.submit(fc);

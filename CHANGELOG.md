@@ -10,12 +10,17 @@
 
 ## Version History
 
+### v1.3.0
+
+- :rocket: Merge cameras into a single Feature per site, named by the portion of the camera names they share
+
 ### v1.2.0
 
 - :tada: Poll the public ALERTWest camera API (`GET /api/getCameraDataByLoc`) - no API key is required and `BaseURL` defaults to `https://api.cdn.prod.alertwest.com`
 - :tada: `States`, `Providers` & `IncludeOffline` inputs filter the ~13k camera feed - private cameras & locations are always excluded
-- :tada: Latest image URL built from the camera screenshot filename on the ALERTWest image CDN and linked (`r-u`) alongside the provider website; screenshots older than a day are not linked
-- :rocket: `camera` schema reworked around the public feed (id, location_id, provider, sponsor, camera class/type, ptz, offline, azimuth, elevation, fov...) - `APIKey`, `source`, `site_*`, `view_line`, `range`, manufacturer/model/serial are removed
+- :tada: Co-located cameras are merged into one Feature per site, named by the portion of the camera names they share, with every camera's latest image linked; the sensor bearing is kept only when the site has a single PTZ camera as a CoT holds one sensor cone
+- :tada: Latest image URLs built from the camera screenshot filename on the ALERTWest image CDN and linked (`r-u`) alongside the provider website; screenshots older than a day are not linked
+- :rocket: The `camera` Output schema is replaced by a `site` schema (id, name, county, state, provider, sponsor, offline, camera_count, image URL/time and a `cameras` array) - `APIKey`, `source`, `site_*`, `view_line`, `range`, manufacturer/model/serial are removed
 
 ### v1.1.1
 

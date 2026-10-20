@@ -4,17 +4,21 @@
 
 ## Overview
 
-This ETL polls the public ALERTWest camera API (`GET /api/getCameraDataByLoc`) and submits every public, located camera to
-CloudTAK under the `camera` Output schema. No API key is required.
+This ETL polls the public ALERTWest camera API (`GET /api/getCameraDataByLoc`) and submits one Feature per camera site -
+every public camera ALERTWest installs at one location - to CloudTAK under the `site` Output schema. No API key is required.
 
 Each submitted Feature carries:
 
-- The camera location as a Point
-- The camera name as the callsign and `b-m-p-s-p-loc` (Sensor Point) as the CoT type
-- A `sensor` block with the azimuth & field of view of PTZ cameras, so TAK clients can show the camera bearing
-- The latest image (`r-u` link, shown as a thumbnail in CloudTAK and a tappable link in ATAK) and the provider website
-- A `metadata` object conforming to the `camera` schema - provider, sponsor, county, state, camera class/type, PTZ &
-  offline flags, azimuth/elevation/zoom/fov, last moved time, image URL/time
+- The site location as a Point
+- The site name (the portion of the camera names shared by every camera there, ie `Mt_Lewis_1` & `Mt_Lewis_2` give
+  `Mt_Lewis`) as the callsign and `b-m-p-s-p-loc` (Sensor Point) as the CoT type
+- A `sensor` block with the azimuth & field of view when the site has exactly one PTZ camera - a CoT carries a single
+  sensor cone, so sites with several PTZ cameras list each camera's azimuth in the remarks instead
+- The latest image of every camera (`r-u` links, shown as thumbnails in CloudTAK and tappable links in ATAK) and the
+  provider website(s)
+- A `metadata` object conforming to the `site` schema - provider, sponsor, county, state, offline flag, camera count,
+  most recent image URL/time and a `cameras` array with each camera's class/type, PTZ & offline flags,
+  azimuth/elevation/zoom/fov, last moved time and image URL/time
 
 Latest images live on the ALERTWest image CDN under the camera id and the UTC capture date encoded in the screenshot
 filename. The CDN stops serving old screenshots, so images older than a day are reported in `metadata.image_time` but not
@@ -35,18 +39,17 @@ and/or `Providers` filters to keep the Layer to the cameras you need.
 
 ## Device API
 
-To register each camera as a CloudTAK Core Device rather than (or as well as) a CoT marker, add a Layer Mapping for the
-`camera` schema with the **Core Device** destination. The Features in the `camera` submission expose the following metadata
+To register each site as a CloudTAK Core Device rather than (or as well as) a CoT marker, add a Layer Mapping for the
+`site` schema with the **Core Device** destination. The Features in the `site` submission expose the following metadata
 fields for the Mapping templates:
 
 | Core Device field | Suggested template |
 | ----------------- | ------------------ |
 | Name              | `{{name}}` |
 | Type              | A MIL-STD-2525E Symbol ID for a ground sensor - ie `10031500001200000000` |
-| Manufacturer      | `{{camera_class}}` |
-| Model             | `{{camera_type}}` |
-| Serial            | `{{hostname}}` |
-| External ID       | system `alertwest`, value `{{id}}` |
+| Manufacturer      | `{{provider}}` |
+| Model             | `{{camera_count}} cameras` |
+| External ID       | system `alertwest`, value `{{id}}` (the ALERTWest location id) |
 | Remarks           | `{{provider}} - {{county}}, {{state}}` |
 
 The Layer token must hold the `device:create` & `device:update` permissions for a Core Device Mapping to be accepted - both are

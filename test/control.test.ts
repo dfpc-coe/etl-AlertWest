@@ -76,7 +76,7 @@ async function run(environment: Record<string, unknown>) {
     return { submitted: submitted as Static<typeof SubmitFeatureCollection> | null };
 }
 
-test('control - submits public online cameras under the camera schema', async () => {
+test('control - submits one site per location under the site schema', async () => {
     const api = await mock();
 
     try {
@@ -87,12 +87,12 @@ test('control - submits public online cameras under the camera schema', async ()
         ]);
 
         assert.ok(submitted);
-        assert.equal(submitted.schema, 'camera');
+        assert.equal(submitted.schema, 'site');
 
-        // Offline, private & image-less offline cameras are excluded by default
-        assert.deepEqual(submitted.features.map((feat) => feat.id), [
-            'alertwest-2178',
-            'alertwest-9659'
+        // Offline & private cameras are excluded by default; co-located cameras merge
+        assert.deepEqual(submitted.features.map((feat) => [feat.id, feat.properties.metadata.camera_count]), [
+            ['alertwest-site-205', 2],
+            ['alertwest-site-5915', 1]
         ]);
     } finally {
         await api.close();
@@ -107,10 +107,10 @@ test('control - IncludeOffline keeps offline cameras but never private ones', as
 
         assert.ok(submitted);
         assert.deepEqual(submitted.features.map((feat) => feat.id), [
-            'alertwest-2178',
-            'alertwest-9659',
-            'alertwest-11852',
-            'alertwest-21017'
+            'alertwest-site-205',
+            'alertwest-site-5915',
+            'alertwest-site-7872',
+            'alertwest-site-23494'
         ]);
     } finally {
         await api.close();
@@ -124,14 +124,14 @@ test('control - States & Providers filters are case insensitive', async () => {
         const byState = await run({ BaseURL: api.base, States: ['ca', ' WA '], IncludeOffline: true });
         assert.ok(byState.submitted);
         assert.deepEqual(byState.submitted.features.map((feat) => feat.id), [
-            'alertwest-2178',
-            'alertwest-9659',
-            'alertwest-11852'
+            'alertwest-site-205',
+            'alertwest-site-5915',
+            'alertwest-site-7872'
         ]);
 
         const byProvider = await run({ BaseURL: api.base, Providers: ['ucsd'] });
         assert.ok(byProvider.submitted);
-        assert.deepEqual(byProvider.submitted.features.map((feat) => feat.id), ['alertwest-2178']);
+        assert.deepEqual(byProvider.submitted.features.map((feat) => feat.id), ['alertwest-site-205']);
     } finally {
         await api.close();
     }
