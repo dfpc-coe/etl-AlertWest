@@ -1,13 +1,17 @@
 import type { Static } from '@sinclair/typebox';
 import { Type } from '@sinclair/typebox';
-import type { SubmitFeature } from '@tak-ps/etl';
+import type { SyncedRecord } from './devices.js';
+import { DeviceSync } from './devices.js';
 import type { Camera, Location } from './alertwest.js';
 import { text, number, flag, coordinates, epoch, imageTime, imageUrl } from './parse.js';
 
 export const SCHEMA_SITE = 'site';
 
-/** Site Type - a Sensor Point in the CoT type tree */
-export const COT_TYPE = 'b-m-p-s-p-loc';
+/** External ID system the Devices are filed under */
+export const SYSTEM = 'alertwest';
+
+/** Default Device Type - a MIL-STD-2525E friendly emplaced Land Equipment Sensor */
+export const DEVICE_TYPE = '10031500002202000000';
 
 /** Screenshots older than this are not linked - the CDN no longer serves them */
 export const MAX_IMAGE_AGE_MS = 24 * 60 * 60 * 1000;
@@ -49,8 +53,10 @@ export const SiteSchema = Type.Object({
     cameras: Type.Array(CameraSchema, { description: 'Cameras at the site' })
 });
 
-export type FeatureOptions = {
+export type SiteOptions = {
     now?: Date;
+    /** MIL-STD-2525E Symbol ID the Device is created with */
+    type?: string;
 };
 
 export function cameraMetadata(camera: Static<typeof Camera>, now: Date): Static<typeof CameraSchema> | null {
@@ -115,15 +121,23 @@ function latest(values: Array<string | null>): string | null {
     }, null);
 }
 
+/** Device health from the cameras at the site - Full, Reduced or Offline */
+export function siteStatus(cameras: Array<{ offline: boolean }>): string {
+    const offline = cameras.filter((camera) => camera.offline).length;
+    if (offline === 0) return 'Full';
+    return offline === cameras.length ? 'Offline' : 'Reduced';
+}
+
 /**
- * Map the cameras at a location to a single Feature - returns null for
- * locations without a verified position or without any cameras
+ * Map the cameras at a location to a single Device record keyed by the
+ * ALERTWest location id - returns null for locations without a verified
+ * position or without any cameras
  */
-export function siteFeature(
+export function siteDevice(
     cameras: Array<Static<typeof Camera>>,
     location: Static<typeof Location> | undefined,
-    opts: FeatureOptions = {}
-): Static<typeof SubmitFeature> | null {
+    opts: SiteOptions = {}
+): SyncedRecord | null {
     const now = opts.now ?? new Date();
 
     const position = location ? coordinates(location) : null;
@@ -155,57 +169,14 @@ export function siteFeature(
         cameras: cams
     };
 
-    const time = metadata.image_time ?? latest(cams.map((camera) => camera.last_moved)) ?? now.toISOString();
-
-    const feature: Static<typeof SubmitFeature> = {
-        id: `alertwest-site-${metadata.id}`,
-        type: 'Feature',
-        properties: {
-            callsign: metadata.name,
-            type: COT_TYPE,
-            how: 'm-g',
-            time,
-            start: time,
-            remarks: remarks([
-                `Site: ${metadata.name}`,
-                metadata.provider ? `Provider: ${metadata.provider}` : null,
-                metadata.sponsor ? `Sponsor: ${metadata.sponsor}` : null,
-                metadata.county || metadata.state ? `Location: ${[metadata.county, metadata.state].filter((part) => part).join(', ')}` : null,
-                `Cameras: ${cams.length}`,
-                ...cams.map((camera) => `- ${camera.name}${camera.ptz && camera.azimuth !== null ? ` (${camera.azimuth}°)` : ''}${camera.offline ? ' [offline]' : ''}`),
-                metadata.image_time ? `Last Image: ${metadata.image_time}` : null,
-                metadata.offline ? 'Status: Offline' : null
-            ]),
-            metadata
-        },
-        geometry: {
-            type: 'Point',
-            coordinates: position
-        }
-    };
-
-    // A CoT carries a single sensor cone, so the bearing is only meaningful
-    // when one PTZ camera is at the site - fixed cameras report an azimuth of 0
-    const ptz = cams.filter((camera) => camera.ptz && camera.azimuth !== null);
-    if (ptz.length === 1) {
-        feature.properties.sensor = {
-            azimuth: ptz[0].azimuth!,
-            ...(ptz[0].fov ? { fov: ptz[0].fov } : {}),
-            hideFov: true
-        };
-    }
-
-    const links: NonNullable<Static<typeof SubmitFeature>['properties']['links']> = [];
+    const links: SyncedRecord['device']['links'] = [];
 
     for (const camera of cams) {
         if (!camera.image_url) continue;
 
         links.push({
-            uid: `alertwest-${camera.id}-image`,
-            relation: 'r-u',
-            mime: 'image/jpeg',
-            url: camera.image_url,
-            remarks: cams.length > 1 ? camera.name : 'Latest Image'
+            name: cams.length > 1 ? camera.name : 'Latest Image',
+            url: camera.image_url
         });
     }
 
@@ -217,17 +188,35 @@ export function siteFeature(
     }
 
     for (const [url, provider] of providers) {
-        links.push({
-            uid: `${feature.id}-${provider.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
-            relation: 'r-u',
-            url,
-            remarks: provider
-        });
+        links.push({ name: provider, url });
     }
 
-    if (links.length) feature.properties.links = links;
-
-    return feature;
+    return {
+        external: metadata.id,
+        device: {
+            name: DeviceSync.clampName(metadata.name),
+            type: opts.type ?? DEVICE_TYPE,
+            geometry: {
+                type: 'Point',
+                coordinates: position
+            },
+            manufacturer: metadata.provider ?? '',
+            model: unique(cams.map((camera) => camera.camera_class)) ?? '',
+            status: siteStatus(cams),
+            remarks: remarks([
+                `Site: ${metadata.name}`,
+                metadata.provider ? `Provider: ${metadata.provider}` : null,
+                metadata.sponsor ? `Sponsor: ${metadata.sponsor}` : null,
+                metadata.county || metadata.state ? `Location: ${[metadata.county, metadata.state].filter((part) => part).join(', ')}` : null,
+                `Cameras: ${cams.length}`,
+                ...cams.map((camera) => `- ${camera.name}${camera.ptz && camera.azimuth !== null ? ` (${camera.azimuth}°)` : ''}${camera.offline ? ' [offline]' : ''}`),
+                metadata.image_time ? `Last Image: ${metadata.image_time}` : null,
+                metadata.offline ? 'Status: Offline' : null
+            ]),
+            metadata,
+            links
+        }
+    };
 }
 
 function remarks(lines: Array<string | null>): string {

@@ -21,7 +21,7 @@ test('Incoming Input schema', async () => {
 
     assert.equal(schema.type, 'object');
 
-    for (const key of ['BaseURL', 'States', 'Providers', 'IncludeOffline', 'DEBUG']) {
+    for (const key of ['BaseURL', 'States', 'Providers', 'IncludeOffline', 'DeviceType', 'Channels', 'DEBUG']) {
         assert.ok(schema.properties[key], `Env schema missing property: ${key}`);
         assert.notEqual(schema.properties[key].default, undefined, `Env property ${key} must have a default`);
     }
@@ -29,6 +29,8 @@ test('Incoming Input schema', async () => {
     assert.ok(!schema.properties.APIKey);
     assert.equal(schema.properties.BaseURL.default, 'https://api.cdn.prod.alertwest.com');
     assert.equal(schema.properties.IncludeOffline.default, false);
+    assert.equal(schema.properties.DeviceType.default, '10031500002202000000');
+    assert.deepEqual(schema.properties.Channels.default, []);
     assert.equal(schema.properties.DEBUG.default, false);
 });
 

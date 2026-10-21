@@ -4,25 +4,30 @@
 
 ## Overview
 
-This ETL polls the public ALERTWest camera API (`GET /api/getCameraDataByLoc`) and submits one Feature per camera site -
-every public camera ALERTWest installs at one location - to CloudTAK under the `site` Output schema. No API key is required.
+This ETL polls the public ALERTWest camera API (`GET /api/getCameraDataByLoc`) and registers one CloudTAK Core Device
+per camera site - every public camera ALERTWest installs at one location - through the CloudTAK Device API. No API key
+is required.
 
-Each submitted Feature carries:
+Each site Device carries:
 
-- The site location as a Point
+- The site location as its Point geometry
 - The site name (the portion of the camera names shared by every camera there, ie `Mt_Lewis_1` & `Mt_Lewis_2` give
-  `Mt_Lewis`) as the callsign and `b-m-p-s-p-loc` (Sensor Point) as the CoT type
-- A `sensor` block with the azimuth & field of view when the site has exactly one PTZ camera - a CoT carries a single
-  sensor cone, so sites with several PTZ cameras list each camera's azimuth in the remarks instead
-- The latest image of every camera (`r-u` links, shown as thumbnails in CloudTAK and tappable links in ATAK) and the
-  provider website(s)
-- A `metadata` object conforming to the `site` schema - provider, sponsor, county, state, offline flag, camera count,
-  most recent image URL/time and a `cameras` array with each camera's class/type, PTZ & offline flags,
+  `Mt_Lewis`) and the `DeviceType` Symbol ID
+- The camera provider as the manufacturer and the camera class(es) (`axis`, `cctv`, `flir`) as the model
+- A status of `Full`, `Reduced` or `Offline` depending on how many of the site's cameras ALERTWest reports offline
+- The latest image of every camera and the provider website(s) as links
+- A `metadata` object conforming to the `site` Output schema - provider, sponsor, county, state, offline flag, camera
+  count, most recent image URL/time and a `cameras` array with each camera's class/type, PTZ & offline flags,
   azimuth/elevation/zoom/fov, last moved time and image URL/time
+- An external ID of the ALERTWest location id under the `alertwest` system
+
+Devices are matched to sites by that external ID. The Device ID and a digest of the last state written are cached in
+the Layer's ephemeral store, so an unchanged site costs no API calls and a site whose cache entry is missing is looked
+up in the Device list before a new Device is created. A site that leaves the feed keeps its Device - nothing is deleted.
 
 Latest images live on the ALERTWest image CDN under the camera id and the UTC capture date encoded in the screenshot
 filename. The CDN stops serving old screenshots, so images older than a day are reported in `metadata.image_time` but not
-linked. Private cameras & locations are never submitted, and unlocated cameras are skipped and logged.
+linked. Private cameras & locations are never registered, and unlocated cameras are skipped and logged.
 
 ## Configuration
 
@@ -32,28 +37,16 @@ linked. Private cameras & locations are never submitted, and unlocated cameras a
 | `States`         | Two letter state or province codes to include (ie `CA`, `CO`) - empty includes every camera |
 | `Providers`      | Camera providers to include (ie `UCSD`, `ALERTWest`, `CALTRANS`, `FAA`, `UDOT`) - empty includes every provider |
 | `IncludeOffline` | Include cameras ALERTWest reports as offline - off by default |
+| `DeviceType`     | MIL-STD-2525E Symbol ID the site Devices are created with - defaults to `10031500002202000000`, a friendly emplaced sensor |
+| `Channels`       | TAK Channel bitpos values the site Devices are shared with - empty leaves the Devices unshared and visible to admins only |
 | `DEBUG`          | Print raw API responses in the layer logs |
 
 The full feed is around 13,000 cameras across 40 states & provinces, most of them DOT traffic cameras - use the `States`
-and/or `Providers` filters to keep the Layer to the cameras you need.
+and/or `Providers` filters to keep the Layer to the cameras you need. Every site whose imagery changed is updated on each
+run, so the Layer's compute timeout is sized for a few thousand sites.
 
-## Device API
-
-To register each site as a CloudTAK Core Device rather than (or as well as) a CoT marker, add a Layer Mapping for the
-`site` schema with the **Core Device** destination. The Features in the `site` submission expose the following metadata
-fields for the Mapping templates:
-
-| Core Device field | Suggested template |
-| ----------------- | ------------------ |
-| Name              | `{{name}}` |
-| Type              | A MIL-STD-2525E Symbol ID for a ground sensor - ie `10031500001200000000` |
-| Manufacturer      | `{{provider}}` |
-| Model             | `{{camera_count}} cameras` |
-| External ID       | system `alertwest`, value `{{id}}` (the ALERTWest location id) |
-| Remarks           | `{{provider}} - {{county}}, {{state}}` |
-
-The Layer token must hold the `device:create` & `device:update` permissions for a Core Device Mapping to be accepted - both are
-requested via `capabilities.json`. Features that match no Core Device Mapping are delivered to the TAK Server as CoT.
+The Layer token must hold the `device:create`, `device:read` & `device:update` permissions - all three are requested via
+`capabilities.json`.
 
 ## Development
 

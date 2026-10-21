@@ -10,6 +10,14 @@
 
 ## Version History
 
+### v2.0.0
+
+- :tada: Sites are written as CloudTAK Core Devices through the `@tak-ps/etl` Device SDK instead of being submitted as CoT Features - one Device per site keyed by the ALERTWest location id under the `alertwest` external ID system, with the provider as manufacturer, camera class as model, a `Full`/`Reduced`/`Offline` status, image & provider links and the `site` metadata
+- :tada: `DeviceType` input sets the MIL-STD-2525E Symbol ID of the site Devices and `Channels` shares them with TAK Channels
+- :rocket: Device IDs & a digest of the last write are cached in the Layer ephemeral store so unchanged sites cost no API calls; a missing cache entry is recovered from the Device list
+- :rocket: `feature:*` is no longer requested - the task requires `device:create`, `device:read` & `device:update`
+- :white_check_mark: Unit tests for the Device sync and the control loop against a mock of the CloudTAK Device API
+
 ### v1.3.0
 
 - :rocket: Merge cameras into a single Feature per site, named by the portion of the camera names they share

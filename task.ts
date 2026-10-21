@@ -1,10 +1,12 @@
 import type { Static, TSchema } from '@sinclair/typebox';
 import { Type } from '@sinclair/typebox';
-import type { Event, NamedSchema, SubmitFeatureCollection, SubmitFeature } from '@tak-ps/etl';
+import type { Event, NamedSchema } from '@tak-ps/etl';
 import ETL, { SchemaType, handler as internal, local, DataFlowType, InvocationType } from '@tak-ps/etl';
 import AlertWest, { DEFAULT_URL } from './lib/alertwest.js';
 import type { Camera, Location } from './lib/alertwest.js';
-import { SiteSchema, SCHEMA_SITE, siteFeature } from './lib/features.js';
+import { SiteSchema, SCHEMA_SITE, SYSTEM, DEVICE_TYPE, siteDevice } from './lib/site.js';
+import { DeviceCache, DeviceSync } from './lib/devices.js';
+import type { SyncedRecord } from './lib/devices.js';
 import { text, flag } from './lib/parse.js';
 
 const InputSchema = Type.Object({
@@ -23,6 +25,14 @@ const InputSchema = Type.Object({
     IncludeOffline: Type.Boolean({
         default: false,
         description: 'Include cameras ALERTWest reports as offline'
+    }),
+    DeviceType: Type.String({
+        default: DEVICE_TYPE,
+        description: 'MIL-STD-2525E Symbol ID each site Device is created with - defaults to a friendly emplaced sensor'
+    }),
+    Channels: Type.Array(Type.Integer({ minimum: 0 }), {
+        default: [],
+        description: 'TAK Channel bitpos values the site Devices are shared with - empty leaves the Devices unshared'
     }),
     DEBUG: Type.Boolean({
         default: false,
@@ -99,21 +109,47 @@ export default class Task extends ETL {
             sites.set(key, site);
         }
 
-        const features: Array<Static<typeof SubmitFeature>> = [];
+        const records: Array<SyncedRecord> = [];
         for (const site of sites.values()) {
-            const feat = siteFeature(site.cameras, site.location);
-            if (feat) features.push(feat);
+            const record = siteDevice(site.cameras, site.location, { type: env.DeviceType });
+            if (record) records.push(record);
         }
 
-        console.log(`ok - obtained ${features.length} sites from ${cameras.length} cameras (${skipped} filtered)`);
+        console.log(`ok - obtained ${records.length} sites from ${cameras.length} cameras (${skipped} filtered)`);
 
-        const fc: Static<typeof SubmitFeatureCollection> = {
-            type: 'FeatureCollection',
-            schema: SCHEMA_SITE,
-            features
-        };
+        const sync = new DeviceSync(this.api, await this.deviceCache(), {
+            system: SYSTEM,
+            channels: env.Channels
+        });
 
-        await this.submit(fc);
+        await sync.syncAll(records);
+
+        await this.patchEphemeral({ devices: sync.cache });
+
+        console.log(`ok - ${sync.summary()}`);
+    }
+
+    async deviceCache(): Promise<DeviceCache> {
+        const layer = await this.fetchLayer();
+
+        try {
+            return this.type(DeviceCache, layer.incoming?.ephemeral.devices ?? {});
+        } catch {
+            return {};
+        }
+    }
+
+    /**
+     * The ephemeral store is replaced on every write - merge so other keys
+     * are never clobbered by the Device cache
+     */
+    async patchEphemeral(values: Record<string, unknown>): Promise<void> {
+        const layer = await this.fetchLayer();
+        const ephemeral = { ...(layer.incoming?.ephemeral ?? {}), ...values };
+
+        await this.setEphemeral(ephemeral);
+
+        if (layer.incoming) layer.incoming.ephemeral = ephemeral;
     }
 }
 
