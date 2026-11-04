@@ -38,7 +38,7 @@ linked. Private cameras & locations are never registered, and unlocated cameras 
 | `Providers`      | Camera providers to include (ie `UCSD`, `ALERTWest`, `CALTRANS`, `FAA`, `UDOT`) - empty includes every provider |
 | `IncludeOffline` | Include cameras ALERTWest reports as offline - off by default |
 | `DeviceType`     | MIL-STD-2525E Symbol ID the site Devices are created with - defaults to `10031500002202000000`, a friendly emplaced sensor |
-| `Channels`       | TAK Channel bitpos values the site Devices are shared with - empty leaves the Devices unshared and visible to admins only |
+| `Channels`       | TAK Channel bitpos values new site Devices are shared with - empty inherits the Channels of the Layer's Connection. Channel assignments of existing Devices are never changed, so edits made in CloudTAK stick |
 | `DEBUG`          | Print raw API responses in the layer logs |
 
 The full feed is around 13,000 cameras across 40 states & provinces, most of them DOT traffic cameras - use the `States`

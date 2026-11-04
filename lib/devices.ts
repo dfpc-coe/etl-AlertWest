@@ -11,9 +11,11 @@ export const DeviceCache = Type.Record(Type.String(), Type.Object({
 
 export type DeviceCache = Static<typeof DeviceCache>;
 
-/** The SDK operations the sync uses */
+/** The SDK operations the sync uses - channels may be omitted on create to inherit the Connection's */
 export type DeviceAPI = {
-    Device: Pick<CloudTAKAPI['Device'], 'list' | 'create' | 'update'>;
+    Device: Pick<CloudTAKAPI['Device'], 'list' | 'update'> & {
+        create(body: Omit<CoreDeviceCreate, 'channels'> & { channels?: Array<number> }): Promise<CoreDevice>;
+    };
 };
 
 export type SyncedDevice = Pick<CoreDeviceCreate, 'name' | 'type' | 'geometry' | 'manufacturer' | 'model' | 'status' | 'remarks' | 'metadata' | 'links'>;
@@ -33,7 +35,7 @@ export type Counts = {
 export type DeviceSyncOptions = {
     /** External ID system the records are filed under */
     system: string;
-    /** TAK Channels the Devices are shared with - left as they are when empty */
+    /** TAK Channels new Devices are shared with - empty inherits the Channels of the Layer's Connection; existing Devices keep their Channel assignments */
     channels?: Array<number>;
 };
 
@@ -106,8 +108,7 @@ export class DeviceSync {
     }
 
     private async write(record: SyncedRecord): Promise<void> {
-        const channels = this.opts.channels ?? [];
-        const hash = DeviceSync.digest({ device: record.device, channels });
+        const hash = DeviceSync.digest(record.device);
 
         let cached: DeviceCache[string] | undefined = this.cache[record.external];
 
@@ -126,10 +127,7 @@ export class DeviceSync {
 
         if (cached) {
             try {
-                device = await this.api.Device.update(cached.id, {
-                    ...record.device,
-                    ...(channels.length ? { channels } : {})
-                });
+                device = await this.api.Device.update(cached.id, record.device);
                 this.counts.updated++;
             } catch (err) {
                 if (DeviceSync.statusOf(err) !== 404) throw err;
@@ -145,7 +143,7 @@ export class DeviceSync {
                 firmware: '',
                 simulated: false,
                 style: {},
-                channels
+                ...(this.opts.channels?.length ? { channels: this.opts.channels } : {})
             });
             this.counts.created++;
         }

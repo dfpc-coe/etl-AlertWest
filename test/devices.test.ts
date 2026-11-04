@@ -92,7 +92,7 @@ test('DeviceSync - creates, updates, and skips unchanged records', async () => {
     assert.equal(second.summary(), '2 records: 0 created, 1 updated, 1 unchanged, 0 failed');
 });
 
-test('DeviceSync - channels are written and part of the change digest', async () => {
+test('DeviceSync - channels are set on create only and never patched', async () => {
     const api = new FakeAPI();
     const cache: DeviceCache = {};
 
@@ -102,11 +102,16 @@ test('DeviceSync - channels are written and part of the change digest', async ()
     api.log = [];
     const sync = new DeviceSync(api, cache, { system: SYSTEM, channels: [3, 5] });
     await sync.sync(record('1'));
-    assert.deepEqual(api.log, ['update device-1 name,type,geometry,manufacturer,model,status,remarks,metadata,links,channels']);
+    assert.deepEqual(api.log, [], 'a Channels change alone is not a Device change');
+    assert.deepEqual(api.byExternal('1').channels, [3]);
 
     api.log = [];
-    await new DeviceSync(api, cache, { system: SYSTEM }).sync(record('1'));
+    await new DeviceSync(api, cache, { system: SYSTEM, channels: [3, 5] }).sync(record('1', { status: 'Offline' }));
     assert.deepEqual(api.log, ['update device-1 name,type,geometry,manufacturer,model,status,remarks,metadata,links']);
+    assert.deepEqual(api.byExternal('1').channels, [3]);
+
+    await new DeviceSync(api, cache, { system: SYSTEM }).sync(record('2'));
+    assert.equal(api.byExternal('2').channels, undefined, 'empty Channels inherits the Connection channels');
 });
 
 test('DeviceSync - an empty cache is rebuilt from the Device index', async () => {

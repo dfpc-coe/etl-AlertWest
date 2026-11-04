@@ -32,7 +32,7 @@ const InputSchema = Type.Object({
     }),
     Channels: Type.Array(Type.Integer({ minimum: 0 }), {
         default: [],
-        description: 'TAK Channel bitpos values the site Devices are shared with - empty leaves the Devices unshared'
+        description: 'TAK Channel bitpos values new site Devices are shared with - empty inherits the Channels of the Layer\'s Connection; Channel assignments of existing Devices are never changed'
     }),
     DEBUG: Type.Boolean({
         default: false,

@@ -154,7 +154,7 @@ test('control - creates one Device per located site', async () => {
         assert.equal(device.name, 'Mt_Lewis_Tuolumne');
         assert.equal(device.type, '10031500002202000000');
         assert.equal(device.status, 'Full');
-        assert.deepEqual(device.channels, []);
+        assert.equal(device.channels, undefined);
 
         const cache = api.ephemeral.devices as Record<string, { id: string; hash: string }>;
         assert.deepEqual(Object.keys(cache).sort(), ['205', '5915']);
@@ -198,7 +198,7 @@ test('control - DeviceType & Channels are applied, an existing Device is updated
 
         for (const device of api.devices.values()) {
             assert.equal(device.type, '10031000001213000000');
-            assert.deepEqual(device.channels, [2, 4]);
+            assert.equal(device.channels, undefined, 'Channel assignments of existing Devices are left alone');
         }
     } finally {
         await api.close();

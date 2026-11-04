@@ -10,6 +10,12 @@
 
 ## Version History
 
+### Pending Release
+
+### v2.1.0
+
+- :rocket: `Channels` applies to Device creates only - empty inherits the active Channels of the Layer's Connection (CloudTAK `POST /api/core/device` now mirrors the Event API) and Channel assignments of existing Devices are never patched, so Channel edits made in CloudTAK stick
+
 ### v2.0.0
 
 - :tada: Sites are written as CloudTAK Core Devices through the `@tak-ps/etl` Device SDK instead of being submitted as CoT Features - one Device per site keyed by the ALERTWest location id under the `alertwest` external ID system, with the provider as manufacturer, camera class as model, a `Full`/`Reduced`/`Offline` status, image & provider links and the `site` metadata
