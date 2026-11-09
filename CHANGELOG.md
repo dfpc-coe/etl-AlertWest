@@ -10,11 +10,15 @@
 
 ## Version History
 
+### Pending Release
+
+### v2.3.0
+
+- :arrow_up: Update `@tak-ps/etl` to 11.x - Output schemas are published as named schemas, as required by CloudTAK v14
+
 ### v2.2.0
 
 - :arrow_up: Update Core Dependencies
-
-### Pending Release
 
 ### v2.1.0
 
