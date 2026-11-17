@@ -5,8 +5,8 @@ import ETL, { SchemaType, handler as internal, local, DataFlowType, InvocationTy
 import AlertWest, { DEFAULT_URL } from './lib/alertwest.js';
 import type { Camera, Location } from './lib/alertwest.js';
 import { SiteSchema, SCHEMA_SITE, SYSTEM, DEVICE_TYPE, siteDevice } from './lib/site.js';
-import { DeviceCache, DeviceSync } from './lib/devices.js';
-import type { SyncedRecord } from './lib/devices.js';
+import { DeviceCacheSchema, DeviceSync } from './lib/devices.js';
+import type { DeviceCache, SyncedRecord } from './lib/devices.js';
 import { text, flag } from './lib/parse.js';
 
 const InputSchema = Type.Object({
@@ -49,17 +49,12 @@ export default class Task extends ETL {
         type: SchemaType = SchemaType.Input,
         flow: DataFlowType = DataFlowType.Incoming
     ): Promise<TSchema | Array<NamedSchema>> {
-        if (flow === DataFlowType.Incoming) {
-            if (type === SchemaType.Input) {
-                return InputSchema;
-            } else {
-                return [
-                    { id: SCHEMA_SITE, schema: SiteSchema }
-                ];
-            }
-        } else {
-            return Type.Object({});
-        }
+        if (flow !== DataFlowType.Incoming) return Type.Object({});
+        if (type === SchemaType.Input) return InputSchema;
+
+        return [
+            { id: SCHEMA_SITE, schema: SiteSchema }
+        ];
     }
 
     async control(): Promise<void> {
@@ -72,8 +67,8 @@ export default class Task extends ETL {
 
         const { cameras, locations } = await api.cameras();
 
-        const states = new Set(env.States.map((state) => state.trim().toUpperCase()).filter((state) => state));
-        const providers = new Set(env.Providers.map((provider) => provider.trim().toUpperCase()).filter((provider) => provider));
+        const states = new Set(env.States.map((state) => state.trim().toUpperCase()).filter(Boolean));
+        const providers = new Set(env.Providers.map((provider) => provider.trim().toUpperCase()).filter(Boolean));
 
         const sites = new Map<string, { location: Static<typeof Location> | undefined, cameras: Array<Static<typeof Camera>> }>();
         let skipped = 0;
@@ -92,13 +87,13 @@ export default class Task extends ETL {
             }
 
             const state = (text(camera.st) ?? text(location?.st) ?? '').toUpperCase();
-            if (states.size && !states.has(state)) {
+            if (states.size > 0 && !states.has(state)) {
                 skipped++;
                 continue;
             }
 
             const provider = (text(camera.pr) ?? '').toUpperCase();
-            if (providers.size && !providers.has(provider)) {
+            if (providers.size > 0 && !providers.has(provider)) {
                 skipped++;
                 continue;
             }
@@ -133,7 +128,7 @@ export default class Task extends ETL {
         const layer = await this.fetchLayer();
 
         try {
-            return this.type(DeviceCache, layer.incoming?.ephemeral.devices ?? {});
+            return this.type(DeviceCacheSchema, layer.incoming?.ephemeral.devices ?? {});
         } catch {
             return {};
         }
@@ -145,7 +140,7 @@ export default class Task extends ETL {
      */
     async patchEphemeral(values: Record<string, unknown>): Promise<void> {
         const layer = await this.fetchLayer();
-        const ephemeral = { ...(layer.incoming?.ephemeral ?? {}), ...values };
+        const ephemeral = { ...layer.incoming?.ephemeral, ...values };
 
         await this.setEphemeral(ephemeral);
 
@@ -154,6 +149,6 @@ export default class Task extends ETL {
 }
 
 await local(await Task.init(import.meta.url), import.meta.url);
-export async function handler(event: Event = {}) {
-    return await internal(await Task.init(import.meta.url), event);
+export async function handler(event: Event = {}): ReturnType<typeof internal> {
+    return internal(await Task.init(import.meta.url), event);
 }

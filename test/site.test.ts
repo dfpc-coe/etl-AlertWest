@@ -1,19 +1,28 @@
 import test from 'node:test';
 import assert from 'node:assert';
 import fs from 'node:fs';
+import type { Static } from '@sinclair/typebox';
 import { Value } from '@sinclair/typebox/value';
+import type { Camera, Location } from '../lib/alertwest.js';
 import { siteDevice, siteName, siteStatus, SiteSchema, DEVICE_TYPE } from '../lib/site.js';
 
-const fixture = JSON.parse(fs.readFileSync(new URL('./fixtures/cameras.json', import.meta.url), 'utf8'));
+type Fixture = {
+    data: {
+        cams: { data: Array<Static<typeof Camera>> };
+        locs: { data: Array<Static<typeof Location>> };
+    };
+};
+
+const fixture = JSON.parse(fs.readFileSync(new URL('./fixtures/cameras.json', import.meta.url), 'utf8')) as Fixture;
 const cameras = fixture.data.cams.data;
-const locations = new Map(fixture.data.locs.data.map((loc: { id: number }) => [String(loc.id), loc]));
+const locations = new Map(fixture.data.locs.data.map((loc) => [String(loc.id), loc]));
 
 // Shortly after the fixture screenshots were captured
 const now = new Date('2026-10-20T04:00:00Z');
 
-function site(lid: number) {
+function site(lid: number): { cameras: Array<Static<typeof Camera>>, location: Static<typeof Location> | undefined } {
     return {
-        cameras: cameras.filter((camera: { lid: number }) => camera.lid === lid),
+        cameras: cameras.filter((camera) => camera.lid === lid),
         location: locations.get(String(lid))
     };
 }

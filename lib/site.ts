@@ -95,7 +95,7 @@ export function cameraMetadata(camera: Static<typeof Camera>, now: Date): Static
  * give `Mt_Lewis`. Falls back to the first camera name
  */
 export function siteName(names: Array<string>): string {
-    if (!names.length) return '';
+    if (names.length === 0) return '';
     if (names.length === 1) return names[0];
 
     const tokens = names.map((name) => name.split('_'));
@@ -111,7 +111,7 @@ export function siteName(names: Array<string>): string {
 
 function unique(values: Array<string | null>): string | null {
     const set = new Set(values.filter((value): value is string => value !== null));
-    return set.size ? Array.from(set).join(', ') : null;
+    return set.size > 0 ? Array.from(set).join(', ') : null;
 }
 
 function latest(values: Array<string | null>): string | null {
@@ -149,11 +149,13 @@ export function siteDevice(
     const cams = cameras
         .map((camera) => cameraMetadata(camera, now))
         .filter((camera): camera is Static<typeof CameraSchema> => camera !== null);
-    if (!cams.length) return null;
+    if (cams.length === 0) return null;
 
-    const freshest = cams
-        .filter((camera) => camera.image_url && camera.image_time)
-        .sort((a, b) => (a.image_time! < b.image_time! ? 1 : -1))[0];
+    let freshest: { image_url: string, image_time: string } | undefined;
+    for (const { image_url, image_time } of cams) {
+        if (!image_url || !image_time) continue;
+        if (!freshest || image_time >= freshest.image_time) freshest = { image_url, image_time };
+    }
 
     const metadata: Static<typeof SiteSchema> = {
         id: String(location.id),
@@ -207,7 +209,7 @@ export function siteDevice(
                 `Site: ${metadata.name}`,
                 metadata.provider ? `Provider: ${metadata.provider}` : null,
                 metadata.sponsor ? `Sponsor: ${metadata.sponsor}` : null,
-                metadata.county || metadata.state ? `Location: ${[metadata.county, metadata.state].filter((part) => part).join(', ')}` : null,
+                metadata.county || metadata.state ? `Location: ${[metadata.county, metadata.state].filter(Boolean).join(', ')}` : null,
                 `Cameras: ${cams.length}`,
                 ...cams.map((camera) => `- ${camera.name}${camera.ptz && camera.azimuth !== null ? ` (${camera.azimuth}°)` : ''}${camera.offline ? ' [offline]' : ''}`),
                 metadata.image_time ? `Last Image: ${metadata.image_time}` : null,

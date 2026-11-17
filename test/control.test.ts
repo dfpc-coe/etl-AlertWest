@@ -10,7 +10,7 @@ process.env.ETL_TOKEN = process.env.ETL_TOKEN || 'etl.test-token';
 
 const { default: Task } = await import('../task.js');
 
-const fixture = JSON.parse(fs.readFileSync(new URL('./fixtures/cameras.json', import.meta.url), 'utf8'));
+const fixture: unknown = JSON.parse(fs.readFileSync(new URL('./fixtures/cameras.json', import.meta.url), 'utf8'));
 
 type Device = Record<string, unknown> & { id: string; external_ids: Record<string, string> };
 
@@ -38,28 +38,31 @@ async function mock(body: unknown = fixture, code = 200): Promise<Mock> {
         const url = new URL(req.url || '/', 'http://localhost');
         state.requests.push({ method: req.method || '', url: url.pathname });
 
-        const json = (status: number, payload: unknown) => {
+        const json = (status: number, payload: unknown): void => {
             res.writeHead(status, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify(payload));
         };
 
-        const read = () => new Promise<Record<string, unknown>>((resolve) => {
+        const read = (handle: (input: Record<string, unknown>) => void): void => {
             let raw = '';
-            req.on('data', (chunk) => raw += chunk);
-            req.on('end', () => resolve(raw ? JSON.parse(raw) : {}));
-        });
+            req.on('data', (chunk: Buffer) => { raw += chunk.toString(); });
+            req.on('end', () => { handle(raw ? JSON.parse(raw) as Record<string, unknown> : {}); });
+        };
 
         if (req.method === 'GET' && url.pathname === '/api/getCameraDataByLoc') {
-            return json(code, body);
+            json(code, body);
+            return;
         }
 
         if (req.method === 'GET' && url.pathname === '/api/core/device') {
-            const items = [...state.devices.values()].reverse();
-            return json(200, { total: items.length, items });
+            const items: Array<Device> = [];
+            for (const device of state.devices.values()) items.unshift(device);
+            json(200, { total: items.length, items });
+            return;
         }
 
         if (req.method === 'POST' && url.pathname === '/api/core/device') {
-            return read().then((input) => {
+            read((input) => {
                 const { external_id, ...rest } = input as { external_id?: { system: string; value: string } };
                 const device: Device = {
                     id: `00000000-0000-4000-8000-${String(++seq).padStart(12, '0')}`,
@@ -69,31 +72,37 @@ async function mock(body: unknown = fixture, code = 200): Promise<Mock> {
                 state.devices.set(device.id, device);
                 json(200, device);
             });
+            return;
         }
 
         const patch = url.pathname.match(/^\/api\/core\/device\/([^/]+)$/);
         if (req.method === 'PATCH' && patch) {
-            return read().then((input) => {
+            read((input) => {
                 const device = state.devices.get(patch[1]);
-                if (!device) return json(404, { status: 404, message: 'Device Not Found' });
+                if (!device) {
+                    json(404, { status: 404, message: 'Device Not Found' });
+                    return;
+                }
                 Object.assign(device, input);
                 json(200, device);
             });
+            return;
         }
 
         if (req.method === 'PUT' && url.pathname === '/api/connection/1/layer/1/incoming/ephemeral') {
-            return read().then((input) => {
+            read((input) => {
                 state.ephemeral = input;
                 json(200, {});
             });
+            return;
         }
 
         json(404, { status: 404, message: 'not found' });
     });
 
-    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    await new Promise<void>((resolve) => { server.listen(0, '127.0.0.1', resolve); });
     state.base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
-    state.close = () => new Promise((resolve) => server.close(() => resolve()));
+    state.close = async () => new Promise((resolve) => { server.close(() => { resolve(); }); });
 
     return state;
 }

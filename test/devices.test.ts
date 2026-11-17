@@ -19,7 +19,8 @@ class FakeAPI implements DeviceAPI {
     Device = {
         list: async (query: Partial<CoreDeviceListQuery> = {}) => {
             this.log.push(`list ${query.page ?? 0}`);
-            const items = [...this.devices.values()].reverse();
+            const items: Array<CoreDevice> = [];
+            for (const device of this.devices.values()) items.unshift(device);
             const limit = query.limit ?? 10;
             const page = query.page ?? 0;
             return { total: items.length, items: items.slice(page * limit, (page + 1) * limit) };
@@ -27,7 +28,7 @@ class FakeAPI implements DeviceAPI {
         create: async (body: CoreDeviceCreate) => {
             this.log.push('create');
             const { external_id, ...rest } = body;
-            const external = external_id && typeof external_id === 'object' ? { [external_id.system]: external_id.value } : {};
+            const external = typeof external_id === 'object' && external_id !== null ? { [external_id.system]: external_id.value } : {};
             const device = { id: `device-${++this.seq}`, ...rest, external_ids: external } as unknown as CoreDevice;
             this.devices.set(device.id, device);
             return device;
@@ -163,7 +164,7 @@ test('DeviceSync - syncAll bounds the records in flight', async () => {
     api.Device.create = async (body: CoreDeviceCreate) => {
         inflight++;
         peak = Math.max(peak, inflight);
-        await new Promise((resolve) => setTimeout(resolve, 5));
+        await new Promise((resolve) => { setTimeout(resolve, 5); });
         inflight--;
         const device = { id: `device-${++api.seq}`, ...body, external_ids: {} } as unknown as CoreDevice;
         api.devices.set(device.id, device);

@@ -4,12 +4,12 @@ import { Type } from '@sinclair/typebox';
 import type { CloudTAKAPI, CoreDevice, CoreDeviceCreate } from '@tak-ps/etl';
 
 /** CloudTAK Device ID & a digest of the last state written, keyed by external ID */
-export const DeviceCache = Type.Record(Type.String(), Type.Object({
+export const DeviceCacheSchema = Type.Record(Type.String(), Type.Object({
     id: Type.String(),
     hash: Type.String()
 }));
 
-export type DeviceCache = Static<typeof DeviceCache>;
+export type DeviceCache = Static<typeof DeviceCacheSchema>;
 
 /** The SDK operations the sync uses - channels may be omitted on create to inherit the Connection's */
 export type DeviceAPI = {
@@ -110,12 +110,7 @@ export class DeviceSync {
     private async write(record: SyncedRecord): Promise<void> {
         const hash = DeviceSync.digest(record.device);
 
-        let cached: DeviceCache[string] | undefined = this.cache[record.external];
-
-        if (!cached) {
-            const found = await this.find(record.external);
-            if (found) cached = { id: found.id, hash: '' };
-        }
+        const cached = this.cached(record.external) ?? await this.lookup(record.external);
 
         if (cached && cached.hash === hash) {
             this.cache[record.external] = cached;
@@ -143,7 +138,7 @@ export class DeviceSync {
                 firmware: '',
                 simulated: false,
                 style: {},
-                ...(this.opts.channels?.length ? { channels: this.opts.channels } : {})
+                ...(this.opts.channels !== undefined && this.opts.channels.length > 0 ? { channels: this.opts.channels } : {})
             });
             this.counts.created++;
         }
@@ -156,12 +151,16 @@ export class DeviceSync {
      * memory of it - the Devices visible to the task are indexed by external
      * ID once per run on the first miss
      */
-    private async find(external: string): Promise<{ id: string } | null> {
+    private async lookup(external: string): Promise<DeviceCache[string] | undefined> {
         this.index ??= this.buildIndex();
 
         const id = (await this.index).get(external);
 
-        return id ? { id } : null;
+        return id ? { id, hash: '' } : undefined;
+    }
+
+    private cached(external: string): DeviceCache[string] | undefined {
+        return this.cache[external];
     }
 
     private index?: Promise<Map<string, string>>;
